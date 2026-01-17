@@ -1,0 +1,46 @@
+@baseUrl = http://localhost:8080/api
+@token = {{login.response.body.token}}
+
+### 1. Login para obtener Token
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+    "username": "admin_user",
+    "password": "12345"
+}
+
+### 2. Crear un nuevo usuario (Requiere Token)
+POST {{baseUrl}}/usuarios
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "username": "marioss2",
+    "password": "123456",
+    "roleIds": [2]
+}
+
+### 3. Listar todos los usuarios
+GET {{baseUrl}}/usuarios
+Authorization: Bearer {{token}}
+
+### 4. Obtener usuario por ID
+GET {{baseUrl}}/usuarios/1
+Authorization: Bearer {{token}}
+
+### 5. Actualizar usuario
+PUT {{baseUrl}}/usuarios/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "username": "admin_updated",
+    "password": "newpassword123",
+    "roleIds": [1, 2]
+}
+
+### 6. Eliminar usuario
+DELETE {{baseUrl}}/usuarios/2
+Authorization: Bearer {{token}}

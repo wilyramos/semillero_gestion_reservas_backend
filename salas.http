@@ -1,0 +1,49 @@
+@baseUrl = http://localhost:8080/api
+@token = {{login.response.body.token}}
+
+### 1. Autenticación (Obtener Token)
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+    "username": "marioss2",
+    "password": "123456"
+}
+
+### 2. Listar todas las salas
+# Acceso: ADMIN, USUARIO
+GET {{baseUrl}}/salas
+Authorization: Bearer {{token}}
+
+### 3. Obtener sala por ID
+# Acceso: ADMIN, USUARIO
+GET {{baseUrl}}/salas/1
+Authorization: Bearer {{token}}
+
+### 4. Crear nueva sala
+# Acceso: Solo ROLE_ADMIN
+POST {{baseUrl}}/salas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "nombre": "Sala de matematicas",
+    "capacidad": 17
+}
+
+### 5. Actualizar sala existente
+# Acceso: Solo ROLE_ADMIN
+PUT {{baseUrl}}/salas/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "nombre": "Sala de Innovación Actualizada",
+    "capacidad": 20
+}
+
+### 6. Eliminar sala
+# Acceso: Solo ROLE_ADMIN
+DELETE {{baseUrl}}/salas/1
+Authorization: Bearer {{token}}

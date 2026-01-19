@@ -3,6 +3,8 @@ package com.reservas.reservas_api.controller;
 import com.reservas.reservas_api.dto.UsuarioRequestDto;
 import com.reservas.reservas_api.dto.UsuarioResponseDto;
 import com.reservas.reservas_api.service.IUserService;
+
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,7 +30,7 @@ public class UsuarioController {
     }
 
     @PostMapping
-    public ResponseEntity<UsuarioResponseDto> create(@RequestBody UsuarioRequestDto dto) {
+    public ResponseEntity<UsuarioResponseDto> create(@Valid @RequestBody UsuarioRequestDto dto) {
         return new ResponseEntity<>(userService.saveRequest(dto), HttpStatus.CREATED);
     }
 

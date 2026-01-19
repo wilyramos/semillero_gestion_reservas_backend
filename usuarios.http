@@ -17,7 +17,7 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-    "username": "",
+    "username": "user",
     "password": "",
     "roleIds": [2]
 }

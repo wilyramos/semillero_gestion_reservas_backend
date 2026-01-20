@@ -1,9 +1,15 @@
 package com.reservas.reservas_api.controller;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -11,36 +17,55 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 
 import com.reservas.reservas_api.dto.CancelarReservaRequestDto;
-import com.reservas.reservas_api.dto.CancelarReservaResponseDto;
 import com.reservas.reservas_api.dto.CrearReservaRequestDto;
-import com.reservas.reservas_api.dto.CrearReservaResponseDto;
+import com.reservas.reservas_api.dto.ReservaResponseDto;
 import com.reservas.reservas_api.service.IReservaService;
 
 @RestController
-@RequestMapping("/reservas")
+@RequestMapping("/api/reservas")
 public class ReservaController {
 
     @Autowired
-    private  IReservaService reservaService;
+    private IReservaService reservaService;
+
+    @GetMapping("/listar")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<ReservaResponseDto>> listarTodas() {
+        return ResponseEntity.ok(reservaService.findAll());
+    }
+
+    @GetMapping("/calendario")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    public ResponseEntity<List<ReservaResponseDto>> obtenerCalendario() {
+        return ResponseEntity.ok(reservaService.getDatosCalendario());
+    }
+
+    @GetMapping("/usuario/{username}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    public ResponseEntity<List<ReservaResponseDto>> listarPorUsuario(@PathVariable String username) {
+        return ResponseEntity.ok(reservaService.findByUsername(username));
+    }
+
+    
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    public ResponseEntity<ReservaResponseDto> buscarPorId(@PathVariable Long id) {
+        return ResponseEntity.ok(reservaService.findById(id));
+    }
+
 
     @PostMapping("/crear")
-    public ResponseEntity<CrearReservaResponseDto> crear(
-            @Valid @RequestBody CrearReservaRequestDto request) {
-
-        reservaService.crearReserva(request);
-        return ResponseEntity
-            .status(HttpStatus.CREATED)
-            .body(new CrearReservaResponseDto("Reserva creada correctamente"));
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    public ResponseEntity<ReservaResponseDto> crear(@Valid @RequestBody CrearReservaRequestDto request) {
+        ReservaResponseDto response = reservaService.save(request);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
-    @PostMapping("/cancelar")
-    public ResponseEntity<CancelarReservaResponseDto> cancelar(
-            @Valid @RequestBody CancelarReservaRequestDto request) {
-
+    @PutMapping("/cancelar")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    public ResponseEntity<Void> cancelar(@Valid @RequestBody CancelarReservaRequestDto request) {
         reservaService.cancelarReserva(request);
-        return ResponseEntity.ok(
-            new CancelarReservaResponseDto("Reserva cancelada correctamente")
-        );
+        return ResponseEntity.noContent().build();
     }
-}
 
+}

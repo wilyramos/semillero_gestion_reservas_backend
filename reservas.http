@@ -1,0 +1,70 @@
+### VARIABLES DE ENTORNO
+@baseUrl = http://localhost:8080/api
+@token = {{login.response.body.token}}
+@username = admin
+
+### 1. AUTENTICACIÓN (Obtener Token)
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+    "username": "admin",
+    "password": "12345"
+}
+
+
+### 2. LISTAR TODAS LAS RESERVAS (Solo ROLE_ADMIN)
+GET {{baseUrl}}/reservas/listar
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 3. VISTA DE CALENDARIO (ROLE_ADMIN y ROLE_USER)
+GET {{baseUrl}}/reservas/calendario
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 4. BUSCAR RESERVAS POR USUARIO
+GET {{baseUrl}}/reservas/usuario/{{username}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 5. BUSCAR RESERVA ESPECÍFICA POR ID
+GET {{baseUrl}}/reservas/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+
+### 6. CREAR NUEVA RESERVA (Válida)
+POST {{baseUrl}}/reservas/crear
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "idSala": 1,
+    "idUsuario": 2,
+    "fechaInicio": "2026-03-20T09:00:00",
+    "fechaFin": "2026-03-20T11:00:00"
+}
+
+### 7. PROBAR CRUCE DE HORARIOS (Debe fallar - Error 400/409)
+POST {{baseUrl}}/reservas/crear
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "idSala": 1,
+    "idUsuario": 1,
+    "fechaInicio": "2026-02-15T10:00:00",
+    "fechaFin": "2026-02-15T12:00:00"
+}
+
+### 8. CANCELAR RESERVA
+PUT {{baseUrl}}/reservas/cancelar
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "idReserva": 1,
+    "motivo": "Reunión movida para la próxima semana"
+}

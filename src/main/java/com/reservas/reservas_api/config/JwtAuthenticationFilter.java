@@ -36,21 +36,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String jwt = authHeader.substring(7);
 
         try {
+            //obtener el nombre de usuario del token
             String username = jwtUtil.extractUsername(jwt);
 
+            // Authenticar al user en el contexto de seguridad de Spring
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                // Creamos el objeto de autenticación usando solo los datos del token
+
+                // obtener roles y permisos del token
+                var authorities = jwtUtil.extractAuthorities(jwt);
+
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         username,
                         null,
-                        jwtUtil.extractAuthorities(jwt) // Extraídos del claim del JWT
-                );
+                        authorities);
 
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+                // Establecer la autenticación en el contexto de seguridad
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
         } catch (Exception e) {
-            // Token inválido o expirado
+            // Limpieza en caso de token malformado o expirado
             SecurityContextHolder.clearContext();
         }
 
@@ -59,7 +65,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return request.getServletPath().startsWith("/api/auth")
+        // Excluir rutas públicas y pre-flight requests (CORS)
+        String path = request.getServletPath();
+        return path.startsWith("/api/auth")
+                || path.startsWith("/swagger-ui")
+                || path.startsWith("/v3/api-docs")
                 || request.getMethod().equals("OPTIONS");
     }
 }

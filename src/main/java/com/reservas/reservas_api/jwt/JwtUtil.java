@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 @Component
 public class JwtUtil {
 
+    // Clave secreta y tiempo de expiración del token
     @Value("${jwt.secret:my_secret_key_2026}")
     private String secret;
 
@@ -25,7 +26,7 @@ public class JwtUtil {
         Algorithm algorithm = Algorithm.HMAC256(secret);
         return JWT.create()
                 .withSubject(username)
-                .withClaim("roles", roles) // Inyectamos roles en el token
+                .withClaim("roles", roles) // Aquí se guardan como ROLE_ADMIN, ROLE_USER
                 .withIssuedAt(new Date())
                 .withExpiresAt(new Date(System.currentTimeMillis() + expiration))
                 .sign(algorithm);
@@ -35,11 +36,12 @@ public class JwtUtil {
         return decodeToken(token).getSubject();
     }
 
+    // Extrae las autoridades (roles) del token JWT
     public List<SimpleGrantedAuthority> extractAuthorities(String token) {
         DecodedJWT decodedJWT = decodeToken(token);
         return decodedJWT.getClaim("roles").asList(String.class)
                 .stream()
-                .map(SimpleGrantedAuthority::new)
+                .map(SimpleGrantedAuthority::new) // Mapea directamente a ROLE_ADMIN, ROLE_USER
                 .collect(Collectors.toList());
     }
 

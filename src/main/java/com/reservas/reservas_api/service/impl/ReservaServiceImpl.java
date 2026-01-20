@@ -1,98 +1,144 @@
 package com.reservas.reservas_api.service.impl;
 
-import java.sql.Timestamp;
-
-import org.springframework.jdbc.core.CallableStatementCallback;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Service;
-
-import com.reservas.reservas_api.dto.CancelarReservaRequestDto;
-import com.reservas.reservas_api.dto.CrearReservaRequestDto;
-import com.reservas.reservas_api.exception.BadRequestException;
-import com.reservas.reservas_api.exception.ConflictException;
-import com.reservas.reservas_api.exception.ResourceNotFoundException;
+import com.reservas.reservas_api.dto.*;
+import com.reservas.reservas_api.exception.*;
+import com.reservas.reservas_api.mappers.ReservaMapper;
+import com.reservas.reservas_api.models.ReservaEntity;
+import com.reservas.reservas_api.repository.IReservaRepository;
 import com.reservas.reservas_api.service.IReservaService;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.ParameterMode;
+import jakarta.persistence.StoredProcedureQuery;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class ReservaServiceImpl implements IReservaService {
 
-    private final JdbcTemplate jdbcTemplate;
+    private final IReservaRepository reservaRepository;
+    private final ReservaMapper reservaMapper;
+    private final EntityManager entityManager;
 
-    public ReservaServiceImpl(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
-    }
+    private static final String ROLE_ADMIN = "ROLE_ADMIN";
 
     @Override
-    public void crearReserva(CrearReservaRequestDto request) {
+    @Transactional
+    public ReservaResponseDto save(CrearReservaRequestDto request) {
+        StoredProcedureQuery q = entityManager.createStoredProcedureQuery("RESERVAS.pkg_reservas.pr_crear_reserva");
 
-        jdbcTemplate.execute(
-            "{ call pkg_reservas.pr_crear_reserva(?,?,?,?,?,?) }",
-            (CallableStatementCallback<Void>) cs -> {
+        // El orden debe ser el mismo que en el Package
+        q.registerStoredProcedureParameter("p_id_sala", Long.class, ParameterMode.IN);
+        q.registerStoredProcedureParameter("p_id_usuario", Long.class, ParameterMode.IN);
+        q.registerStoredProcedureParameter("p_fecha_inicio", java.time.LocalDateTime.class, ParameterMode.IN);
+        q.registerStoredProcedureParameter("p_fecha_fin", java.time.LocalDateTime.class, ParameterMode.IN);
+        q.registerStoredProcedureParameter("p_id_reserva", Long.class, ParameterMode.OUT);
+        q.registerStoredProcedureParameter("p_codigo_salida", Integer.class, ParameterMode.OUT);
+        q.registerStoredProcedureParameter("p_mensaje_salida", String.class, ParameterMode.OUT);
 
-                cs.setLong(1, request.getIdSala());
-                cs.setLong(2, request.getIdUsuario());
-                cs.setDate(3, new java.sql.Date(Timestamp.valueOf(request.getFechaInicio()).getTime()));
-                cs.setDate(4, new java.sql.Date(Timestamp.valueOf(request.getFechaFin()).getTime()));
-                
-                cs.registerOutParameter(5, java.sql.Types.NUMERIC);
-                cs.registerOutParameter(6, java.sql.Types.VARCHAR);
+        q.setParameter("p_id_sala", request.getIdSala());
+        q.setParameter("p_id_usuario", request.getIdUsuario());
+        q.setParameter("p_fecha_inicio", request.getFechaInicio());
+        q.setParameter("p_fecha_fin", request.getFechaFin());
 
-                cs.execute();
-                
-                int codigo = cs.getInt(5);
-                String mensaje = cs.getString(6);
-                
-                if (codigo != 0) {
-                    handleError(codigo, mensaje);
-                }
-                
-                return null;
-            }
-        );
+        q.execute();
+
+        Integer codigo = (Integer) q.getOutputParameterValue("p_codigo_salida");
+        String mensaje = (String) q.getOutputParameterValue("p_mensaje_salida");
+        Long idGenerado = (Long) q.getOutputParameterValue("p_id_reserva");
+
+        if (codigo != 0) {
+            throw new BadRequestException(mensaje);
+        }
+
+        // Buscamos la entidad completa para que el mapper cargue nombres de
+        // sala/usuario
+        return reservaRepository.findById(idGenerado)
+                .map(reservaMapper::toResponseDto)
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("Reserva creada pero no encontrada con ID: " + idGenerado));
     }
 
     @Override
     public void cancelarReserva(CancelarReservaRequestDto request) {
+        StoredProcedureQuery q = entityManager.createStoredProcedureQuery("RESERVAS.pkg_reservas.pr_cancelar_reserva");
 
-        jdbcTemplate.execute(
-            "{ call pkg_reservas.pr_cancelar_reserva(?,?,?,?) }",
-            (CallableStatementCallback<Void>) cs -> {
+        q.registerStoredProcedureParameter("p_id_reserva", Long.class, ParameterMode.IN);
+        q.registerStoredProcedureParameter("p_motivo", String.class, ParameterMode.IN);
+        q.registerStoredProcedureParameter("p_codigo_salida", Integer.class, ParameterMode.OUT);
+        q.registerStoredProcedureParameter("p_mensaje_salida", String.class, ParameterMode.OUT);
 
-                cs.setLong(1, request.getIdReserva());
-                cs.setString(2, request.getMotivo());
-                
-                cs.registerOutParameter(3, java.sql.Types.NUMERIC);
-                cs.registerOutParameter(4, java.sql.Types.VARCHAR);
+        q.setParameter("p_id_reserva", request.getIdReserva());
+        q.setParameter("p_motivo", request.getMotivo());
 
-                cs.execute();
-                
-                int codigo = cs.getInt(3);
-                String mensaje = cs.getString(4);
-                
-                if (codigo != 0) {
-                    handleError(codigo, mensaje);
-                }
-                
-                return null;
-            }
-        );
-    }
+        q.execute();
 
-    private void handleError(int codigo, String mensaje) {
-        switch (codigo) {
-            case 1:
-            case 3:
-                throw new BadRequestException(mensaje);
-            case 2:
-            case 4:
-                throw new ConflictException(mensaje);
-            case 5:
-            case 6:
-            case 7:
-                throw new ResourceNotFoundException(mensaje);
-            default:
-                throw new RuntimeException(mensaje);
+        Integer codigo = (Integer) q.getOutputParameterValue("p_codigo_salida");
+        String mensaje = (String) q.getOutputParameterValue("p_mensaje_salida");
+
+        if (codigo != 0) {
+            throw new BadRequestException(mensaje);
         }
     }
-}
 
+    @Override
+    public List<ReservaResponseDto> getDatosCalendario() {
+        String usernameActual = SecurityContextHolder.getContext().getAuthentication().getName();
+        boolean isAdmin = hasRole(ROLE_ADMIN);
+
+        return reservaRepository.findAllNotCancelled().stream()
+                .map(reserva -> applyPrivacyFilter(reserva, usernameActual, isAdmin))
+                .toList();
+    }
+
+    private ReservaResponseDto applyPrivacyFilter(ReservaEntity reserva, String usernameActual, boolean isAdmin) {
+        if (isAdmin || reserva.getUsuario().getUsername().equals(usernameActual)) {
+            return reservaMapper.toResponseDto(reserva);
+        }
+
+        return ReservaResponseDto.builder()
+                .idReserva(reserva.getIdReserva())
+                .nombreSala(reserva.getSala().getNombre())
+                .username("Ocupado")
+                .fechaInicio(reserva.getFechaInicio())
+                .fechaFin(reserva.getFechaFin())
+                .estado(reserva.getEstado())
+                .build();
+    }
+
+    @Override
+    public ReservaResponseDto findById(Long id) {
+        return reservaRepository.findById(id)
+                .map(reservaMapper::toResponseDto)
+                .orElseThrow(() -> new ResourceNotFoundException("Reserva no encontrada con ID: " + id));
+    }
+
+    @Override
+    public List<ReservaResponseDto> findAll() {
+        return reservaMapper.toResponseDtoList(reservaRepository.findAll());
+    }
+
+    @Override
+    public List<ReservaResponseDto> findByUsername(String username) {
+        return reservaMapper.toResponseDtoList(reservaRepository.findByUsuarioUsername(username));
+    }
+
+    private boolean hasRole(String role) {
+        return SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals(role));
+    }
+
+    @Override
+    public ReservaResponseDto update(Long id, CrearReservaRequestDto request) {
+        throw new UnsupportedOperationException("Lógica de actualización no permitida directamente.");
+    }
+
+    @Override
+    public ReservaResponseDto delete(Long id) {
+        throw new UnsupportedOperationException("Use el método cancelarReserva para deshabilitar una reserva.");
+    }
+}

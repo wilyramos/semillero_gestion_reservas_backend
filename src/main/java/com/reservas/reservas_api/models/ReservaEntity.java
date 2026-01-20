@@ -2,6 +2,7 @@ package com.reservas.reservas_api.models;
 
 import java.time.LocalDateTime;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -33,9 +34,14 @@ public class ReservaEntity {
 
     @ManyToOne
     @JoinColumn(name = "ID_USUARIO", nullable = false)
-
     private UsuarioEntity usuario;
+
+    @Column(name = "FECHA_INICIO", nullable = false)
     private LocalDateTime fechaInicio;
+
+    @Column(name = "FECHA_FIN", nullable = false)
     private LocalDateTime fechaFin;
+
+    @Column(nullable = false)
     private String estado;
 }

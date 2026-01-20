@@ -14,6 +14,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -140,5 +141,16 @@ public class ReservaServiceImpl implements IReservaService {
     @Override
     public ReservaResponseDto delete(Long id) {
         throw new UnsupportedOperationException("Use el método cancelarReserva para deshabilitar una reserva.");
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ReservaResponseDto> findByFechaRange(LocalDateTime inicio, LocalDateTime fin) {
+        String usernameActual = SecurityContextHolder.getContext().getAuthentication().getName();
+        boolean isAdmin = hasRole(ROLE_ADMIN);
+
+        return reservaRepository.findByFechaRange(inicio, fin).stream()
+                .map(reserva -> applyPrivacyFilter(reserva, usernameActual, isAdmin))
+                .toList();
     }
 }

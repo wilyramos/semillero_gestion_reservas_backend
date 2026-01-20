@@ -19,4 +19,7 @@ public interface IReservaService extends ICrudCommonsDto<CrearReservaRequestDto,
 
     // para calendario
     List<ReservaResponseDto> getDatosCalendario();
+
+    // filtro por fecha
+    List<ReservaResponseDto> findByFechaRange(java.time.LocalDateTime inicio, java.time.LocalDateTime fin);
 }

@@ -13,12 +13,17 @@ import org.springframework.web.bind.annotation.RestController;
 import com.reservas.reservas_api.commons.PaginationModel;
 import com.reservas.reservas_api.dto.DashboardStatsDto;
 import com.reservas.reservas_api.dto.ReservaResponseDto;
+import com.reservas.reservas_api.dto.UsuarioResponseDto;
 import com.reservas.reservas_api.service.IReservaService;
+import com.reservas.reservas_api.service.IUserService;
 
 @RestController
 @RequestMapping("/api/admin")
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminController {
+
+    @Autowired
+    private IUserService userService;
 
     @Autowired
     private IReservaService reservaService;
@@ -33,5 +38,10 @@ public class AdminController {
     public ResponseEntity<PageImpl<ReservaResponseDto>> getReservasPaginado(
             @RequestBody PaginationModel paginationModel) {
         return ResponseEntity.ok(reservaService.getPagination(paginationModel));
+    }
+
+    @PostMapping("/usuarios/paginado")
+    public ResponseEntity<PageImpl<UsuarioResponseDto>> getUsuarios(@RequestBody PaginationModel params) {
+        return ResponseEntity.ok(userService.getPagination(params));
     }
 }

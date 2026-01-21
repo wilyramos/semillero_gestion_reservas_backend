@@ -193,28 +193,41 @@ public class ReservaServiceImpl implements IReservaService {
 
         Pageable pageable = PageRequest.of(page, size);
 
-        // Consulta Base con Constructor DTO
-        StringBuilder sql = new StringBuilder(
-                "SELECT new com.reservas.reservas_api.dto.ReservaResponseDto(" +
-                        "r.idReserva, r.sala.nombre, r.usuario.username, r.fechaInicio, r.fechaFin, r.estado) " +
-                        "FROM ReservaEntity r WHERE 1=1 ");
+        // Where para reutilizar en ambas consultas
+        StringBuilder whereClause = new StringBuilder(" WHERE 1=1 ");
 
-        // Filtros Dinámicos
         if (paginationModel.getFilters() != null && !paginationModel.getFilters().isEmpty()) {
             for (FilterModel filter : paginationModel.getFilters()) {
-                if (filter.getColName().equals("estado") && filter.getValue() != null) {
-                    sql.append(" AND r.estado = '").append(filter.getValue()).append("'");
-                }
-                if (filter.getColName().equals("username") && filter.getValue() != null) {
-                    sql.append(" AND r.usuario.username LIKE '%").append(filter.getValue()).append("%'");
-                }
-                if (filter.getColName().equals("nombreSala") && filter.getValue() != null) {
-                    sql.append(" AND r.sala.nombre LIKE '%").append(filter.getValue()).append("%'");
+                if (filter.getValue() == null || filter.getValue().toString().isEmpty())
+                    continue;
+
+                switch (filter.getColName()) {
+                    case "estado" ->
+                        whereClause.append(" AND r.estado = '").append(filter.getValue()).append("'");
+                    case "username" ->
+                        whereClause.append(" AND r.usuario.username LIKE '%").append(filter.getValue()).append("%'");
+                    case "nombreSala" ->
+                        whereClause.append(" AND r.sala.nombre LIKE '%").append(filter.getValue()).append("%'");
+
+                    // Filtros por rango de fechas
+                    case "fechaInicio" ->
+                        whereClause.append(" AND r.fechaInicio >= TO_TIMESTAMP('").append(filter.getValue())
+                                .append(" 00:00:00', 'YYYY-MM-DD HH24:MI:SS')");
+                    case "fechaFin" ->
+                        whereClause.append(" AND r.fechaFin <= TO_TIMESTAMP('").append(filter.getValue())
+                                .append(" 23:59:59', 'YYYY-MM-DD HH24:MI:SS')");
                 }
             }
         }
 
-        // Ordenamiento Dinámico
+        // Consulta de Datos
+        StringBuilder sql = new StringBuilder(
+                "SELECT new com.reservas.reservas_api.dto.ReservaResponseDto(" +
+                        "r.idReserva, r.sala.nombre, r.usuario.username, r.fechaInicio, r.fechaFin, r.estado) " +
+                        "FROM ReservaEntity r ")
+                .append(whereClause);
+
+        // Ordenamiento
         if (paginationModel.getSorts() != null && !paginationModel.getSorts().isEmpty()) {
             sql.append(" ORDER BY ");
             for (int i = 0; i < paginationModel.getSorts().size(); i++) {
@@ -232,16 +245,14 @@ public class ReservaServiceImpl implements IReservaService {
             sql.append(" ORDER BY r.fechaInicio DESC");
         }
 
-        // Ejecución de la consulta de datos con Offset y MaxResults
         TypedQuery<ReservaResponseDto> querySelect = entityManager.createQuery(sql.toString(),
                 ReservaResponseDto.class);
         querySelect.setFirstResult((int) pageable.getOffset());
         querySelect.setMaxResults(pageable.getPageSize());
         List<ReservaResponseDto> results = querySelect.getResultList();
 
-        // Consulta de conteo para la paginación
-        String countSql = "SELECT COUNT(r) FROM ReservaEntity r WHERE 1=1";
-        // sea exacto
+        // Conteno
+        String countSql = "SELECT COUNT(r) FROM ReservaEntity r " + whereClause;
         Long totalRegistros = entityManager.createQuery(countSql, Long.class).getSingleResult();
 
         return new PageImpl<>(results, pageable, totalRegistros);

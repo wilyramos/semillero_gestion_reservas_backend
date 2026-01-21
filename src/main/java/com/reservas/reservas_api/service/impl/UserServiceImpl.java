@@ -1,5 +1,6 @@
 package com.reservas.reservas_api.service.impl;
 
+import com.reservas.reservas_api.commons.PaginationModel;
 import com.reservas.reservas_api.dto.UsuarioRequestDto;
 import com.reservas.reservas_api.dto.UsuarioResponseDto;
 import com.reservas.reservas_api.exception.BadRequestException;
@@ -14,7 +15,13 @@ import com.reservas.reservas_api.repository.UserRepository;
 import com.reservas.reservas_api.repository.UsuarioRolRepository;
 import com.reservas.reservas_api.service.IUserService;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.TypedQuery;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,9 +38,9 @@ public class UserServiceImpl implements IUserService {
     private final UsuarioRolRepository usuarioRolRepository;
     private final UsuarioMapper usuarioMapper;
     private final PasswordEncoder passwordEncoder;
+    private final EntityManager entityManager;
 
     @Override
-    @Transactional(readOnly = true)
     public List<UsuarioResponseDto> findAll() {
         return usuarioRepository.findAll().stream()
                 .map(u -> usuarioMapper.toResponseDto(u, usuarioRolRepository.findByUsuario(u)))
@@ -59,7 +66,7 @@ public class UserServiceImpl implements IUserService {
         UsuarioEntity user = usuarioMapper.toEntity(dto);
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
         UsuarioEntity savedUser = usuarioRepository.save(user);
-        
+
         List<UsuarioRol> roles = saveUserRoles(savedUser, dto.getRoleIds());
         return usuarioMapper.toResponseDto(savedUser, roles);
     }
@@ -69,15 +76,15 @@ public class UserServiceImpl implements IUserService {
     public UsuarioResponseDto updateRequest(Long id, UsuarioRequestDto dto) {
         UsuarioEntity user = usuarioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
-        
+
         user.setUsername(dto.getUsername());
         if (dto.getPassword() != null && !dto.getPassword().isEmpty()) {
             user.setPassword(passwordEncoder.encode(dto.getPassword()));
         }
-        
+
         usuarioRolRepository.deleteByUsuario(user);
         List<UsuarioRol> roles = saveUserRoles(user, dto.getRoleIds());
-        
+
         return usuarioMapper.toResponseDto(usuarioRepository.save(user), roles);
     }
 
@@ -87,7 +94,7 @@ public class UserServiceImpl implements IUserService {
         UsuarioEntity user = usuarioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
         UsuarioResponseDto response = usuarioMapper.toResponseDto(user, usuarioRolRepository.findByUsuario(user));
-        
+
         usuarioRolRepository.deleteByUsuario(user);
         usuarioRepository.delete(user);
         return response;
@@ -102,7 +109,62 @@ public class UserServiceImpl implements IUserService {
         return usuarioRolRepository.saveAll(roles);
     }
 
-    // 
-    @Override public UsuarioResponseDto save(UsuarioResponseDto entity) { return null; }
-    @Override public UsuarioResponseDto update(Long id, UsuarioResponseDto entity) { return null; }
+    // con paginacion:
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageImpl<UsuarioResponseDto> getPagination(PaginationModel paginationModel) {
+        int page = (paginationModel.getPageNumber() != null) ? paginationModel.getPageNumber() : 0;
+        int size = (paginationModel.getRowsPerPage() != null) ? paginationModel.getRowsPerPage() : 10;
+        Pageable pageable = PageRequest.of(page, size);
+
+        // Consulta para obtener los Usuarios
+        StringBuilder sql = new StringBuilder("SELECT u FROM UsuarioEntity u WHERE 1=1 ");
+
+        // Filtro
+        if (paginationModel.getFilters() != null) {
+            for (var filter : paginationModel.getFilters()) {
+                if (filter.getColName().equals("username")) {
+                    sql.append(" AND u.username LIKE '%").append(filter.getValue()).append("%'");
+                }
+            }
+        }
+
+        // Ordenamiento
+        if (paginationModel.getSorts() != null && !paginationModel.getSorts().isEmpty()) {
+            var sort = paginationModel.getSorts().get(0);
+            sql.append(" ORDER BY u.").append(sort.getColName()).append(" ").append(sort.getDirection());
+        } else {
+            sql.append(" ORDER BY u.idUsuario ASC");
+        }
+
+        TypedQuery<UsuarioEntity> query = entityManager.createQuery(sql.toString(), UsuarioEntity.class);
+        query.setFirstResult((int) pageable.getOffset());
+        query.setMaxResults(pageable.getPageSize());
+
+        List<UsuarioEntity> users = query.getResultList();
+
+        // 4. Mapeo a DTO incluyendo Roles (para evitar LazyInitializationException)
+        List<UsuarioResponseDto> dtos = users.stream().map(u -> {
+            List<UsuarioRol> roles = usuarioRolRepository.findByUsuario(u);
+            return usuarioMapper.toResponseDto(u, roles);
+        }).collect(Collectors.toList());
+
+        // 5. Conteo Total
+        String countSql = "SELECT COUNT(u) FROM UsuarioEntity u";
+        Long total = entityManager.createQuery(countSql, Long.class).getSingleResult();
+
+        return new PageImpl<>(dtos, pageable, total);
+    }
+
+    // de crud commos
+    @Override
+    public UsuarioResponseDto save(UsuarioResponseDto entity) {
+        return null;
+    }
+
+    @Override
+    public UsuarioResponseDto update(Long id, UsuarioResponseDto entity) {
+        return null;
+    }
 }

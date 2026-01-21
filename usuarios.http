@@ -44,3 +44,20 @@ Content-Type: application/json
 ### 6. Eliminar usuario
 DELETE {{baseUrl}}/usuarios/2
 Authorization: Bearer {{token}}
+
+### 7. Listar usuarios con paginación
+POST {{baseUrl}}/usuarios/paginado
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "pageNumber": 0,
+    "rowsPerPage": 10,
+    "sorts": [
+        {
+            "colName": "username",
+            "direction": "ASC"
+        }
+    ],
+    "filters": []
+}

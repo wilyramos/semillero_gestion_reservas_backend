@@ -6,6 +6,7 @@ import com.reservas.reservas_api.service.IUserService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,6 +24,7 @@ public class UsuarioController {
     public ResponseEntity<List<UsuarioResponseDto>> getAll() {
         return ResponseEntity.ok(userService.findAll());
     }
+
 
     @GetMapping("/{id}")
     public ResponseEntity<UsuarioResponseDto> getById(@PathVariable Long id) {
@@ -43,4 +45,5 @@ public class UsuarioController {
     public ResponseEntity<UsuarioResponseDto> delete(@PathVariable Long id) {
         return ResponseEntity.ok(userService.delete(id));
     }
+
 }

@@ -36,3 +36,20 @@ Content-Type: application/json
     ],
     "filters": []
 }
+
+### 4. LISTAR USUARIOS CON PAGINACIÓN 
+POST {{baseUrl}}/admin/usuarios/paginado
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "pageNumber": 0,
+    "rowsPerPage": 10,
+    "sorts": [
+        {
+            "colName": "username",
+            "direction": "ASC"
+        }
+    ],
+    "filters": []
+}

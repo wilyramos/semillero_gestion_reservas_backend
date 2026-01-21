@@ -1,0 +1,38 @@
+### VARIABLES DE ENTORNO
+@baseUrl = http://localhost:8080/api
+@token = {{login.response.body.token}}
+@username = admin
+
+### 1. AUTENTICACIÓN (Obtener Token)
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+    "username": "admin",
+    "password": "12345"
+}
+
+
+### 2. DASHBOARD ADMIN (ROLE_ADMIN)
+# URL : {{baseUrl}}/admin/dashboard/stats
+GET {{baseUrl}}/admin/stats
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 3. LISTAR RESERVAS CON PAGINACIÓN (ROLE_ADMIN)
+POST {{baseUrl}}/admin/reservas/paginado
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "pageNumber": 4,
+    "rowsPerPage": 10,
+    "sorts": [
+        {
+            "colName": "fechaInicio",
+            "direction": "DESC" 
+        }
+    ],
+    "filters": []
+}

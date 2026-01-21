@@ -1,0 +1,18 @@
+package com.reservas.reservas_api.dto;
+
+import java.util.Map;
+
+import lombok.Builder;
+import lombok.Data;
+
+
+@Data
+@Builder
+public class DashboardStatsDto {
+    private long totalReservasHoy;
+    private String salaMayorDemanda;
+
+    // Datos para Gráficos
+    private Map<String, Long> reservasPorSalaSemana; // Sala -> Cantidad
+    private Map<Integer, Long> horasPico; // Hora del día -> Cantidad de reservas
+}

@@ -7,8 +7,8 @@ POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-    "username": "marioss2",
-    "password": "123456"
+    "username": "admin",
+    "password": "12345"
 }
 
 ### 2. Listar todas las salas

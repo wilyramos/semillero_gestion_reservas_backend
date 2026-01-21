@@ -1,5 +1,8 @@
 package com.reservas.reservas_api.service.impl;
 
+import com.reservas.reservas_api.commons.FilterModel;
+import com.reservas.reservas_api.commons.PaginationModel;
+import com.reservas.reservas_api.commons.SortModel;
 import com.reservas.reservas_api.dto.*;
 import com.reservas.reservas_api.exception.*;
 import com.reservas.reservas_api.mappers.ReservaMapper;
@@ -9,13 +12,20 @@ import com.reservas.reservas_api.service.IReservaService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.ParameterMode;
 import jakarta.persistence.StoredProcedureQuery;
+import jakarta.persistence.TypedQuery;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -152,5 +162,88 @@ public class ReservaServiceImpl implements IReservaService {
         return reservaRepository.findByFechaRange(inicio, fin).stream()
                 .map(reserva -> applyPrivacyFilter(reserva, usernameActual, isAdmin))
                 .toList();
+    }
+
+    @Override
+    public DashboardStatsDto getAdminStats() {
+        LocalDateTime inicioMes = LocalDateTime.now().withDayOfMonth(1).withHour(0).withMinute(0);
+
+        // 1. Calcular Ocupación
+        List<ReservaEntity> reservasMes = reservaRepository.findReservasMesActual(inicioMes);
+
+        Map<Integer, Long> horasPico = reservasMes.stream()
+                .collect(Collectors.groupingBy(r -> r.getFechaInicio().getHour(), Collectors.counting()));
+
+        return DashboardStatsDto.builder()
+                .totalReservasHoy(reservaRepository.countReservasHoy())
+                .salaMayorDemanda(reservaRepository.findSalaMasDemandada())
+                .horasPico(horasPico)
+                .build();
+    }
+
+    // get reservas admin with pagination
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageImpl<ReservaResponseDto> getPagination(PaginationModel paginationModel) {
+        int page = (paginationModel.getPageNumber() != null) ? paginationModel.getPageNumber() : 0;
+        int size = (paginationModel.getRowsPerPage() != null && paginationModel.getRowsPerPage() > 0)
+                ? paginationModel.getRowsPerPage()
+                : 10;
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        // Consulta Base con Constructor DTO
+        StringBuilder sql = new StringBuilder(
+                "SELECT new com.reservas.reservas_api.dto.ReservaResponseDto(" +
+                        "r.idReserva, r.sala.nombre, r.usuario.username, r.fechaInicio, r.fechaFin, r.estado) " +
+                        "FROM ReservaEntity r WHERE 1=1 ");
+
+        // Filtros Dinámicos
+        if (paginationModel.getFilters() != null && !paginationModel.getFilters().isEmpty()) {
+            for (FilterModel filter : paginationModel.getFilters()) {
+                if (filter.getColName().equals("estado") && filter.getValue() != null) {
+                    sql.append(" AND r.estado = '").append(filter.getValue()).append("'");
+                }
+                if (filter.getColName().equals("username") && filter.getValue() != null) {
+                    sql.append(" AND r.usuario.username LIKE '%").append(filter.getValue()).append("%'");
+                }
+                if (filter.getColName().equals("nombreSala") && filter.getValue() != null) {
+                    sql.append(" AND r.sala.nombre LIKE '%").append(filter.getValue()).append("%'");
+                }
+            }
+        }
+
+        // Ordenamiento Dinámico
+        if (paginationModel.getSorts() != null && !paginationModel.getSorts().isEmpty()) {
+            sql.append(" ORDER BY ");
+            for (int i = 0; i < paginationModel.getSorts().size(); i++) {
+                SortModel sort = paginationModel.getSorts().get(i);
+                String colName = switch (sort.getColName()) {
+                    case "nombreSala" -> "r.sala.nombre";
+                    case "username" -> "r.usuario.username";
+                    default -> "r." + sort.getColName();
+                };
+                sql.append(colName).append(" ").append(sort.getDirection());
+                if (i < paginationModel.getSorts().size() - 1)
+                    sql.append(", ");
+            }
+        } else {
+            sql.append(" ORDER BY r.fechaInicio DESC");
+        }
+
+        // Ejecución de la consulta de datos con Offset y MaxResults
+        TypedQuery<ReservaResponseDto> querySelect = entityManager.createQuery(sql.toString(),
+                ReservaResponseDto.class);
+        querySelect.setFirstResult((int) pageable.getOffset());
+        querySelect.setMaxResults(pageable.getPageSize());
+        List<ReservaResponseDto> results = querySelect.getResultList();
+
+        // Consulta de conteo para la paginación
+        String countSql = "SELECT COUNT(r) FROM ReservaEntity r WHERE 1=1";
+        // sea exacto
+        Long totalRegistros = entityManager.createQuery(countSql, Long.class).getSingleResult();
+
+        return new PageImpl<>(results, pageable, totalRegistros);
     }
 }

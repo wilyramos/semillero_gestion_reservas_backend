@@ -21,6 +21,7 @@ import jakarta.validation.Valid;
 
 import com.reservas.reservas_api.dto.CancelarReservaRequestDto;
 import com.reservas.reservas_api.dto.CrearReservaRequestDto;
+import com.reservas.reservas_api.dto.DashboardStatsDto;
 import com.reservas.reservas_api.dto.ReservaResponseDto;
 import com.reservas.reservas_api.exception.BadRequestException;
 import com.reservas.reservas_api.service.IReservaService;
@@ -84,5 +85,4 @@ public class ReservaController {
 
         return ResponseEntity.ok(reservaService.findByFechaRange(inicio, fin));
     }
-
 }

@@ -31,14 +31,14 @@ public class SalaController {
 
     // crear nueva sala solo admin
     @PostMapping
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<SalaResponseDto> create(@Valid @RequestBody SalaRequestDto dto) {
         return new ResponseEntity<>(salaService.save(dto), HttpStatus.CREATED);
     }
 
     // actualizar sala solo admin
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<SalaResponseDto> update(
             @PathVariable Long id,
             @Valid @RequestBody SalaRequestDto dto) {
@@ -46,7 +46,7 @@ public class SalaController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<SalaResponseDto> delete(@PathVariable Long id) {
         return ResponseEntity.ok(salaService.delete(id));
     }

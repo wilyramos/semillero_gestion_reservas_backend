@@ -20,4 +20,17 @@ public interface IReservaRepository extends JpaRepository<ReservaEntity, Long> {
     // Filtro por fecha
     @Query("SELECT r FROM ReservaEntity r WHERE r.fechaInicio >= :inicio AND r.fechaFin <= :fin AND r.estado <> 'CANCELADA'")
     List<ReservaEntity> findByFechaRange(@Param("inicio") LocalDateTime inicio, @Param("fin") LocalDateTime fin);
+
+    // Para Dashboard Stats
+
+    @Query(value = "SELECT COUNT(*) FROM reserva " +
+            "WHERE TRUNC(fecha_inicio) = TRUNC(SYSDATE) " +
+            "AND estado <> 'CANCELADA'", nativeQuery = true)
+    long countReservasHoy();
+
+    @Query("SELECT r.sala.nombre FROM ReservaEntity r WHERE r.estado <> 'CANCELADA' GROUP BY r.sala.nombre ORDER BY COUNT(r) DESC LIMIT 1")
+    String findSalaMasDemandada();
+
+    @Query("SELECT r FROM ReservaEntity r WHERE r.fechaInicio >= :inicioMes AND r.estado <> 'CANCELADA'")
+    List<ReservaEntity> findReservasMesActual(@Param("inicioMes") LocalDateTime inicioMes);
 }

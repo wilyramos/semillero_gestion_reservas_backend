@@ -9,8 +9,8 @@ POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-    "username": "admin",
-    "password": "12345"
+    "username": "admin3",
+    "password": "admin3"
 }
 
 
@@ -80,3 +80,21 @@ Authorization: Bearer {{token}}
 GET {{baseUrl}}/reservas/dashboard/stats
 Authorization: Bearer {{token}}
 Content-Type: application/json
+
+
+### RESERVAS PAGINADAS SIN FILTROS (Solo ordenamiento)
+POST {{baseUrl}}/reservas/paginado/admin2
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "pageNumber": 0,
+    "rowsPerPage": 10,
+    "filters": [],
+    "sorts": [
+        {
+            "colName": "estado",
+            "direction": "ASC"
+        }
+    ]
+}

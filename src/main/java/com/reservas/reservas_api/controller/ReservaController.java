@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
 
+import com.reservas.reservas_api.commons.PaginationModel;
 import com.reservas.reservas_api.dto.CancelarReservaRequestDto;
 import com.reservas.reservas_api.dto.CrearReservaRequestDto;
 import com.reservas.reservas_api.dto.DashboardStatsDto;
@@ -84,5 +86,13 @@ public class ReservaController {
         }
 
         return ResponseEntity.ok(reservaService.findByFechaRange(inicio, fin));
+    }
+
+    @PostMapping("/paginado/{username}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    public ResponseEntity<PageImpl<ReservaResponseDto>> getReservasPaginadoPorUsuario(
+            @PathVariable String username,
+            @RequestBody PaginationModel paginationModel) {
+        return ResponseEntity.ok(reservaService.getPaginationByUser(username, paginationModel));
     }
 }

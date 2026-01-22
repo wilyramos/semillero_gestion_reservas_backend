@@ -257,4 +257,79 @@ public class ReservaServiceImpl implements IReservaService {
 
         return new PageImpl<>(results, pageable, totalRegistros);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageImpl<ReservaResponseDto> getPaginationByUser(String username, PaginationModel paginationModel) {
+        int page = (paginationModel.getPageNumber() != null) ? paginationModel.getPageNumber() : 0;
+        int size = (paginationModel.getRowsPerPage() != null && paginationModel.getRowsPerPage() > 0)
+                ? paginationModel.getRowsPerPage()
+                : 10;
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        // Where base con filtro por usuario
+        StringBuilder whereClause = new StringBuilder(" WHERE r.usuario.username = :username ");
+
+        if (paginationModel.getFilters() != null && !paginationModel.getFilters().isEmpty()) {
+            for (FilterModel filter : paginationModel.getFilters()) {
+                if (filter.getValue() == null || filter.getValue().toString().isEmpty())
+                    continue;
+
+                switch (filter.getColName()) {
+                    case "estado" ->
+                        whereClause.append(" AND r.estado = '").append(filter.getValue()).append("'");
+                    case "nombreSala" ->
+                        whereClause.append(" AND r.sala.nombre LIKE '%").append(filter.getValue()).append("%'");
+
+                    // Filtros por rango de fechas
+                    case "fechaInicio" ->
+                        whereClause.append(" AND r.fechaInicio >= TO_TIMESTAMP('").append(filter.getValue())
+                                .append(" 00:00:00', 'YYYY-MM-DD HH24:MI:SS')");
+                    case "fechaFin" ->
+                        whereClause.append(" AND r.fechaFin <= TO_TIMESTAMP('").append(filter.getValue())
+                                .append(" 23:59:59', 'YYYY-MM-DD HH24:MI:SS')");
+                }
+            }
+        }
+
+        // Consulta de Datos
+        StringBuilder sql = new StringBuilder(
+                "SELECT new com.reservas.reservas_api.dto.ReservaResponseDto(" +
+                        "r.idReserva, r.sala.nombre, r.usuario.username, r.fechaInicio, r.fechaFin, r.estado) " +
+                        "FROM ReservaEntity r ")
+                .append(whereClause);
+
+        // Ordenamiento
+        if (paginationModel.getSorts() != null && !paginationModel.getSorts().isEmpty()) {
+            sql.append(" ORDER BY ");
+            for (int i = 0; i < paginationModel.getSorts().size(); i++) {
+                SortModel sort = paginationModel.getSorts().get(i);
+                String colName = switch (sort.getColName()) {
+                    case "nombreSala" -> "r.sala.nombre";
+                    default -> "r." + sort.getColName();
+                };
+                sql.append(colName).append(" ").append(sort.getDirection());
+                if (i < paginationModel.getSorts().size() - 1)
+                    sql.append(", ");
+            }
+        } else {
+            sql.append(" ORDER BY r.fechaInicio DESC");
+        }
+
+        TypedQuery<ReservaResponseDto> querySelect = entityManager.createQuery(sql.toString(),
+                ReservaResponseDto.class);
+        querySelect.setParameter("username", username);
+        querySelect.setFirstResult((int) pageable.getOffset());
+        querySelect.setMaxResults(pageable.getPageSize());
+        List<ReservaResponseDto> results = querySelect.getResultList();
+
+        // Conteo
+        String countSql = "SELECT COUNT(r) FROM ReservaEntity r " + whereClause;
+        TypedQuery<Long> countQuery = entityManager.createQuery(countSql, Long.class);
+        countQuery.setParameter("username", username);
+        Long totalRegistros = countQuery.getSingleResult();
+
+        return new PageImpl<>(results, pageable, totalRegistros);
+    }
 }

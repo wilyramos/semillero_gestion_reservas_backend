@@ -23,7 +23,6 @@ import jakarta.validation.Valid;
 import com.reservas.reservas_api.commons.PaginationModel;
 import com.reservas.reservas_api.dto.CancelarReservaRequestDto;
 import com.reservas.reservas_api.dto.CrearReservaRequestDto;
-import com.reservas.reservas_api.dto.DashboardStatsDto;
 import com.reservas.reservas_api.dto.ReservaResponseDto;
 import com.reservas.reservas_api.exception.BadRequestException;
 import com.reservas.reservas_api.service.IReservaService;
@@ -78,14 +77,16 @@ public class ReservaController {
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     public ResponseEntity<List<ReservaResponseDto>> buscarPorFechas(
             @RequestParam @DateTimeFormat(pattern = DATE_PATTERN) LocalDateTime inicio,
-            @RequestParam @DateTimeFormat(pattern = DATE_PATTERN) LocalDateTime fin) {
+            @RequestParam @DateTimeFormat(pattern = DATE_PATTERN) LocalDateTime fin,
+            @RequestParam(required = false) Long idSala
+        ) {
 
         // Validación de lógica básica antes de ir al service
         if (fin.isBefore(inicio)) {
             throw new BadRequestException("La fecha de fin no puede ser anterior a la de inicio");
         }
 
-        return ResponseEntity.ok(reservaService.findByFechaRange(inicio, fin));
+        return ResponseEntity.ok(reservaService.findByFechaRange(inicio, fin, idSala));
     }
 
     @PostMapping("/paginado/{username}")

@@ -1,5 +1,6 @@
 package com.reservas.reservas_api.service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.data.domain.PageImpl;
@@ -24,8 +25,7 @@ public interface IReservaService extends ICrudCommonsDto<CrearReservaRequestDto,
     List<ReservaResponseDto> getDatosCalendario();
 
     // filtro por fecha
-    List<ReservaResponseDto> findByFechaRange(java.time.LocalDateTime inicio, java.time.LocalDateTime fin);
-
+    List<ReservaResponseDto> findByFechaRange(LocalDateTime inicio, LocalDateTime fin, Long idSala);
     // para dashboard admin
     DashboardStatsDto getAdminStats();
 

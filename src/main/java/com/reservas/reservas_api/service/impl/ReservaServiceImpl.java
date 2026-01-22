@@ -42,7 +42,7 @@ public class ReservaServiceImpl implements IReservaService {
     public ReservaResponseDto save(CrearReservaRequestDto request) {
         StoredProcedureQuery q = entityManager.createStoredProcedureQuery("RESERVAS.pkg_reservas.pr_crear_reserva");
 
-        // El orden debe ser el mismo que en el Package
+        // El mismo orden del package
         q.registerStoredProcedureParameter("p_id_sala", Long.class, ParameterMode.IN);
         q.registerStoredProcedureParameter("p_id_usuario", Long.class, ParameterMode.IN);
         q.registerStoredProcedureParameter("p_fecha_inicio", java.time.LocalDateTime.class, ParameterMode.IN);
@@ -155,11 +155,29 @@ public class ReservaServiceImpl implements IReservaService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ReservaResponseDto> findByFechaRange(LocalDateTime inicio, LocalDateTime fin) {
+    public List<ReservaResponseDto> findByFechaRange(LocalDateTime inicio, LocalDateTime fin, Long idSala) {
         String usernameActual = SecurityContextHolder.getContext().getAuthentication().getName();
         boolean isAdmin = hasRole(ROLE_ADMIN);
 
-        return reservaRepository.findByFechaRange(inicio, fin).stream()
+        // Construir la consulta dinámica JPQL
+        StringBuilder jpql = new StringBuilder(
+                "SELECT r FROM ReservaEntity r WHERE r.fechaInicio >= :inicio AND r.fechaFin <= :fin");
+
+        if (idSala != null) {
+            jpql.append(" AND r.sala.idSala = :idSala");
+        }
+
+        TypedQuery<ReservaEntity> query = entityManager.createQuery(jpql.toString(), ReservaEntity.class);
+
+        query.setParameter("inicio", inicio);
+        query.setParameter("fin", fin);
+
+        if (idSala != null) {
+            query.setParameter("idSala", idSala);
+        }
+
+        // Ejecutar y aplicar filtro de privacidad (tu lógica existente)
+        return query.getResultList().stream()
                 .map(reserva -> applyPrivacyFilter(reserva, usernameActual, isAdmin))
                 .toList();
     }

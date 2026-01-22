@@ -31,4 +31,7 @@ public interface IReservaService extends ICrudCommonsDto<CrearReservaRequestDto,
 
     // para reservas paginadas con filtros y orden
     PageImpl<ReservaResponseDto> getPagination(PaginationModel paginationModel);
+
+    // para reservas paginadas por usuario
+    PageImpl<ReservaResponseDto> getPaginationByUser(String username, PaginationModel paginationModel);
 }

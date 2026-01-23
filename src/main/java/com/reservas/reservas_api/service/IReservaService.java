@@ -12,7 +12,6 @@ import com.reservas.reservas_api.dto.CrearReservaRequestDto;
 import com.reservas.reservas_api.dto.DashboardStatsDto;
 import com.reservas.reservas_api.dto.ReservaResponseDto;
 
-
 public interface IReservaService extends ICrudCommonsDto<CrearReservaRequestDto, ReservaResponseDto, Long> {
     
     void cancelarReserva(CancelarReservaRequestDto request);
@@ -21,17 +20,36 @@ public interface IReservaService extends ICrudCommonsDto<CrearReservaRequestDto,
     
     List<ReservaResponseDto> findByUsername(String username);
 
-    // para calendario
+    /**
+     * Obtiene datos simplificados para el calendario (Vista general).
+     */
     List<ReservaResponseDto> getDatosCalendario();
 
-    // filtro por fecha
-    List<ReservaResponseDto> findByFechaRange(LocalDateTime inicio, LocalDateTime fin, Long idSala);
-    // para dashboard admin
+    /**
+     * Búsqueda avanzada por rango de fechas y filtros opcionales.
+     * Utilizado principalmente por el componente de calendario con filtros dinámicos.
+     */
+    List<ReservaResponseDto> findByFechaRange(
+            LocalDateTime inicio, 
+            LocalDateTime fin, 
+            Long idSala, 
+            String estado, 
+            String username, 
+            String nombreSala
+    );
+
+    /**
+     * Obtiene estadísticas para el dashboard administrativo.
+     */
     DashboardStatsDto getAdminStats();
 
-    // para reservas paginadas con filtros y orden
+    /**
+     * Paginación global para el administrador con soporte de filtros y ordenamiento.
+     */
     PageImpl<ReservaResponseDto> getPagination(PaginationModel paginationModel);
 
-    // para reservas paginadas por usuario
+    /**
+     * Paginación específica para un usuario (Vista "Mis Reservas").
+     */
     PageImpl<ReservaResponseDto> getPaginationByUser(String username, PaginationModel paginationModel);
 }

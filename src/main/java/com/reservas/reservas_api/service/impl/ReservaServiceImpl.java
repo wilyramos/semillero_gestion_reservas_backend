@@ -155,28 +155,47 @@ public class ReservaServiceImpl implements IReservaService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ReservaResponseDto> findByFechaRange(LocalDateTime inicio, LocalDateTime fin, Long idSala) {
+    public List<ReservaResponseDto> findByFechaRange(
+            LocalDateTime inicio,
+            LocalDateTime fin,
+            Long idSala,
+            String estado,
+            String username,
+            String nombreSala) {
+
         String usernameActual = SecurityContextHolder.getContext().getAuthentication().getName();
         boolean isAdmin = hasRole(ROLE_ADMIN);
 
-        // Construir la consulta dinámica JPQL
+        // 1. Construcción de JPQL dinámica
         StringBuilder jpql = new StringBuilder(
                 "SELECT r FROM ReservaEntity r WHERE r.fechaInicio >= :inicio AND r.fechaFin <= :fin");
 
-        if (idSala != null) {
+        if (idSala != null)
             jpql.append(" AND r.sala.idSala = :idSala");
-        }
+        if (estado != null && !estado.isEmpty())
+            jpql.append(" AND r.estado = :estado");
+        if (username != null && !username.isEmpty())
+            jpql.append(" AND r.usuario.username LIKE :username");
+        if (nombreSala != null && !nombreSala.isEmpty())
+            jpql.append(" AND r.sala.nombre LIKE :nombreSala");
 
         TypedQuery<ReservaEntity> query = entityManager.createQuery(jpql.toString(), ReservaEntity.class);
 
+        // 2. Seteo de parámetros obligatorios
         query.setParameter("inicio", inicio);
         query.setParameter("fin", fin);
 
-        if (idSala != null) {
+        // 3. Seteo de parámetros condicionales
+        if (idSala != null)
             query.setParameter("idSala", idSala);
-        }
+        if (estado != null && !estado.isEmpty())
+            query.setParameter("estado", estado);
+        if (username != null && !username.isEmpty())
+            query.setParameter("username", "%" + username + "%");
+        if (nombreSala != null && !nombreSala.isEmpty())
+            query.setParameter("nombreSala", "%" + nombreSala + "%");
 
-        // Ejecutar y aplicar filtro de privacidad (tu lógica existente)
+        // 4. Ejecución y mapeo con filtro de privacidad
         return query.getResultList().stream()
                 .map(reserva -> applyPrivacyFilter(reserva, usernameActual, isAdmin))
                 .toList();

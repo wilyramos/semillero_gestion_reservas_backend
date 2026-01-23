@@ -1,6 +1,7 @@
 package com.reservas.reservas_api.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -20,6 +21,7 @@ import com.reservas.reservas_api.commons.PaginationModel;
 import com.reservas.reservas_api.dto.DashboardStatsDto;
 import com.reservas.reservas_api.dto.ReservaResponseDto;
 import com.reservas.reservas_api.dto.UsuarioResponseDto;
+import com.reservas.reservas_api.exception.BadRequestException;
 import com.reservas.reservas_api.service.IReservaService;
 import com.reservas.reservas_api.service.IUserService;
 
@@ -93,5 +95,66 @@ public class AdminControllerTest {
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(usuariosPage, response.getBody());
+    }
+
+    // Tests de casos de error
+
+    @Test
+    void getReservasPaginadoWithInvalidPage() {
+        PaginationModel invalidPagination = new PaginationModel();
+        invalidPagination.setPageNumber(-1);
+        invalidPagination.setRowsPerPage(10);
+
+        when(reservaService.getPagination(invalidPagination))
+                .thenThrow(new BadRequestException("El número de página no puede ser negativo"));
+
+        assertThrows(BadRequestException.class, 
+                () -> adminController.getReservasPaginado(invalidPagination));
+    }
+
+    @Test
+    void getReservasPaginadoWithInvalidPageSize() {
+        PaginationModel invalidPagination = new PaginationModel();
+        invalidPagination.setPageNumber(0);
+        invalidPagination.setRowsPerPage(0);
+
+        when(reservaService.getPagination(invalidPagination))
+                .thenThrow(new BadRequestException("El tamaño de página debe ser mayor a cero"));
+
+        assertThrows(BadRequestException.class, 
+                () -> adminController.getReservasPaginado(invalidPagination));
+    }
+
+    @Test
+    void getUsuariosWithInvalidPage() {
+        PaginationModel invalidPagination = new PaginationModel();
+        invalidPagination.setPageNumber(-1);
+        invalidPagination.setRowsPerPage(10);
+
+        when(userService.getPagination(invalidPagination))
+                .thenThrow(new BadRequestException("El número de página no puede ser negativo"));
+
+        assertThrows(BadRequestException.class, 
+                () -> adminController.getUsuarios(invalidPagination));
+    }
+
+    @Test
+    void getStatsWithNoData() {
+        DashboardStatsDto emptyStats = new DashboardStatsDto();
+        when(reservaService.getAdminStats()).thenReturn(emptyStats);
+
+        ResponseEntity<DashboardStatsDto> response = adminController.getStats();
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(emptyStats, response.getBody());
+    }
+
+    @Test
+    void getReservasPaginadoWithNullModel() {
+        when(reservaService.getPagination(null))
+                .thenThrow(new IllegalArgumentException("El modelo de paginación no puede ser nulo"));
+
+        assertThrows(IllegalArgumentException.class, 
+                () -> adminController.getReservasPaginado(null));
     }
 }

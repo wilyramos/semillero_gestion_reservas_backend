@@ -1,6 +1,7 @@
 package com.reservas.reservas_api.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -16,6 +17,8 @@ import org.springframework.http.ResponseEntity;
 
 import com.reservas.reservas_api.dto.UsuarioRequestDto;
 import com.reservas.reservas_api.dto.UsuarioResponseDto;
+import com.reservas.reservas_api.exception.ConflictException;
+import com.reservas.reservas_api.exception.ResourceNotFoundException;
 import com.reservas.reservas_api.service.IUserService;
 
 @ExtendWith(MockitoExtension.class)
@@ -74,5 +77,48 @@ public class UsuarioControllerTest {
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(USUARIO_RESPONSE_DTO, response.getBody());
+    }
+
+    // Tests de casos de error
+
+    @Test
+    void createDuplicateUser() {
+        when(userService.saveRequest(USUARIO_REQUEST_DTO))
+                .thenThrow(new ConflictException("El usuario ya existe"));
+
+        assertThrows(ConflictException.class, () -> usuarioController.create(USUARIO_REQUEST_DTO));
+    }
+
+    @Test
+    void getByIdNotFound() {
+        when(userService.findById(999L))
+                .thenThrow(new ResourceNotFoundException("Usuario no encontrado"));
+
+        assertThrows(ResourceNotFoundException.class, () -> usuarioController.getById(999L));
+    }
+
+    @Test
+    void updateUserNotFound() {
+        when(userService.updateRequest(999L, USUARIO_REQUEST_DTO))
+                .thenThrow(new ResourceNotFoundException("Usuario no encontrado"));
+
+        assertThrows(ResourceNotFoundException.class, 
+                () -> usuarioController.update(999L, USUARIO_REQUEST_DTO));
+    }
+
+    @Test
+    void deleteUserNotFound() {
+        when(userService.delete(999L))
+                .thenThrow(new ResourceNotFoundException("Usuario no encontrado"));
+
+        assertThrows(ResourceNotFoundException.class, () -> usuarioController.delete(999L));
+    }
+
+    @Test
+    void createWithInvalidRole() {
+        when(userService.saveRequest(USUARIO_REQUEST_DTO))
+                .thenThrow(new IllegalArgumentException("Rol inválido: el rol con ID 999 no existe"));
+
+        assertThrows(IllegalArgumentException.class, () -> usuarioController.create(USUARIO_REQUEST_DTO));
     }
 }

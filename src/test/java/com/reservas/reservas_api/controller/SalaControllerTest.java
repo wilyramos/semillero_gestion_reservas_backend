@@ -1,6 +1,7 @@
 package com.reservas.reservas_api.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -16,6 +17,8 @@ import org.springframework.http.ResponseEntity;
 
 import com.reservas.reservas_api.dto.SalaRequestDto;
 import com.reservas.reservas_api.dto.SalaResponseDto;
+import com.reservas.reservas_api.exception.ConflictException;
+import com.reservas.reservas_api.exception.ResourceNotFoundException;
 import com.reservas.reservas_api.service.ISalaService;
 
 @ExtendWith(MockitoExtension.class)
@@ -97,5 +100,49 @@ public class SalaControllerTest {
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(SALA_RESPONSE_DTO, response.getBody());
+    }
+
+    // Tests de casos de error
+
+    @Test
+    public void createDuplicateSala() {
+        when(salaService.save(SALA_REQUEST_DTO))
+                .thenThrow(new ConflictException("El nombre de la sala ya existe"));
+
+        assertThrows(ConflictException.class, () -> salaController.create(SALA_REQUEST_DTO));
+    }
+
+    @Test
+    public void getByIdNotFound() {
+        when(salaService.findById(999L))
+                .thenThrow(new ResourceNotFoundException("Sala no encontrada"));
+
+        assertThrows(ResourceNotFoundException.class, () -> salaController.getById(999L));
+    }
+
+    @Test
+    public void updateSalaNotFound() {
+        when(salaService.update(999L, SALA_REQUEST_DTO))
+                .thenThrow(new ResourceNotFoundException("Sala no encontrada"));
+
+        assertThrows(ResourceNotFoundException.class, 
+                () -> salaController.update(999L, SALA_REQUEST_DTO));
+    }
+
+    @Test
+    public void deleteSalaNotFound() {
+        when(salaService.delete(999L))
+                .thenThrow(new ResourceNotFoundException("No se puede eliminar: Sala no encontrada"));
+
+        assertThrows(ResourceNotFoundException.class, () -> salaController.delete(999L));
+    }
+
+    @Test
+    public void createWithInvalidCapacity() {
+        SALA_REQUEST_DTO.setCapacidad(-1);
+        when(salaService.save(SALA_REQUEST_DTO))
+                .thenThrow(new IllegalArgumentException("La capacidad debe ser mayor a cero"));
+
+        assertThrows(IllegalArgumentException.class, () -> salaController.create(SALA_REQUEST_DTO));
     }
 }

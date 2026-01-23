@@ -3,6 +3,8 @@ package com.reservas.reservas_api.controller;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,20 +42,60 @@ public class SalaControllerTest {
 
 
     @Test
+    public void getAll() {
+        var expectedList = List.of(SALA_RESPONSE_DTO);
+        when(salaService.findAll()).thenReturn(expectedList);
+
+        ResponseEntity<List<SalaResponseDto>> response = salaController.getAll();
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(expectedList, response.getBody());
+    }
+
+    @Test
+    public void getById() {
+        when(salaService.findById(5L)).thenReturn(SALA_RESPONSE_DTO);
+
+        ResponseEntity<SalaResponseDto> response = salaController.getById(5L);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(SALA_RESPONSE_DTO, response.getBody());
+    }
+
+    @Test
     public void create() {
-       var expected = ResponseEntity.status(HttpStatus.CREATED).body(SALA_RESPONSE_DTO);
-       when(salaService.save(SALA_REQUEST_DTO)).thenReturn(SALA_RESPONSE_DTO);
+        var expected = ResponseEntity.status(HttpStatus.CREATED).body(SALA_RESPONSE_DTO);
+        when(salaService.save(SALA_REQUEST_DTO)).thenReturn(SALA_RESPONSE_DTO);
 
-       ResponseEntity<SalaResponseDto> response = salaController.create(SALA_REQUEST_DTO);
+        ResponseEntity<SalaResponseDto> response = salaController.create(SALA_REQUEST_DTO);
 
-       var id = response.getBody().getIdSala();
-       assert(id > 1L);
+        assertEquals(expected.getStatusCode(), response.getStatusCode());
+        assertEquals(SALA_RESPONSE_DTO.getIdSala(), response.getBody().getIdSala());
+        assertEquals(expected, response);
+    }
 
-       var statusCode = response.getStatusCode();
-        assertEquals(expected.getStatusCode(), statusCode);
+    @Test
+    public void update() {
+        var updated = new SalaResponseDto();
+        updated.setIdSala(5L);
+        updated.setNombre("Sala B");
+        updated.setCapacidad(60);
 
-       assertEquals(expected, response);
+        when(salaService.update(5L, SALA_REQUEST_DTO)).thenReturn(updated);
 
+        ResponseEntity<SalaResponseDto> response = salaController.update(5L, SALA_REQUEST_DTO);
 
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(updated, response.getBody());
+    }
+
+    @Test
+    public void delete() {
+        when(salaService.delete(5L)).thenReturn(SALA_RESPONSE_DTO);
+
+        ResponseEntity<SalaResponseDto> response = salaController.delete(5L);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(SALA_RESPONSE_DTO, response.getBody());
     }
 }

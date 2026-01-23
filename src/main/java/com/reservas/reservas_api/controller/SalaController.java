@@ -18,7 +18,6 @@ import java.util.List;
 public class SalaController {
     private final ISalaService salaService;
 
-    // obtener todas las salas
     @GetMapping
     public ResponseEntity<List<SalaResponseDto>> getAll() {
         return ResponseEntity.ok(salaService.findAll());
@@ -28,15 +27,13 @@ public class SalaController {
     public ResponseEntity<SalaResponseDto> getById(@PathVariable Long id) {
         return ResponseEntity.ok(salaService.findById(id));
     }
-
-    // crear nueva sala solo admin
+    
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<SalaResponseDto> create(@Valid @RequestBody SalaRequestDto dto) {
         return new ResponseEntity<>(salaService.save(dto), HttpStatus.CREATED);
     }
 
-    // actualizar sala solo admin
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<SalaResponseDto> update(

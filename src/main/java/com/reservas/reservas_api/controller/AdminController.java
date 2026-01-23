@@ -34,7 +34,6 @@ public class AdminController {
     }
 
     @PostMapping("/reservas/paginado")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PageImpl<ReservaResponseDto>> getReservasPaginado(
             @RequestBody PaginationModel paginationModel) {
         return ResponseEntity.ok(reservaService.getPagination(paginationModel));

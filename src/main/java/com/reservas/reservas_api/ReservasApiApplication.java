@@ -20,7 +20,7 @@ public class ReservasApiApplication implements CommandLineRunner{
 
 	public void run(String... args) throws Exception {
 		// genere contraseña con Bean PasswordEncoder
-		String password = "12345";
+		String password = "123456";
 		for (int i = 0; i < 3; i++) {
 			String passwordEncoded = passwordEncoder.encode(password);
 			System.out.println("Password encoded: " + passwordEncoded);
